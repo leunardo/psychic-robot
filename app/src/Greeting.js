@@ -40,6 +40,7 @@ class Greeting extends Component {
     state = {
         ip: '',
         port: '',
+        nickname: ''
     };
 
     get url () {
@@ -88,8 +89,16 @@ class Greeting extends Component {
                                     
                                 </form>
                             </Grid>
+                            <Grid>
+                                <TextField
+                                    fullWidth
+                                    label="Nickname"
+                                    value={this.state.nickname}
+                                    onChange={this.handleChange('nickname')}>
+                                </TextField>
+                            </Grid>
                             <Grid className={classes.button} item xs={12}>
-                                <Button color="primary" onClick={() => connect(this.url)}>
+                                <Button color="primary" onClick={() => connect(this.url, this.state.nickname)}>
                                     <Icon>power</Icon>
                                     Connect
                                 </Button>
