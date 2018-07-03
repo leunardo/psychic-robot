@@ -25,7 +25,7 @@ def prepare_new_msg(message: str, _from: str):
     letter += MSG_TAG + '(' + message + ')\n'
     letter += FROM_TAG + '(' + _from + ')\n'
     letter += RECV_CMD_C
-    return letter.encode()
+    return letter
 
 
 def greet_from_user(msg: str):
@@ -50,9 +50,13 @@ def handle_new_connections(connection: socket, remote_address):
     
     while 1:
         msg = from_dataframe(connection.recv(1024))
-        if (msg):
-            print(msg)
-            connection.sendall(to_dataframe('Test'))
+        if msg.find(SEND_CMD) > -1:
+            payload = extract_from_msg(MSG_TAG, msg)
+            sender = extract_from_msg(FROM_TAG, msg)
+            to_send = prepare_new_msg(payload, sender)
+            
+            for key, value in users_connected.items():
+                value.sendall(to_dataframe(to_send))
 
         if msg == ABORT_CMD:
             print('Connection with ', remote_address, ' was closed.\n')
@@ -65,18 +69,6 @@ def handle_new_connections(connection: socket, remote_address):
                 connection,
                 'CONNECTED'
             })))
-        elif msg.find(SEND_CMD) > -1:
-            recipient = extract_from_msg(TO_TAG, msg)
-            if users_connected[recipient]:
-                recipient_connection = users_connected[recipient]
-                print('Recipient ', recipient, ' found!')
-                
-                letter = extract_from_msg(MSG_TAG, msg)
-                recipient_connection.send(to_dataframe(prepare_new_msg(letter, nickname)))
-                print('Message sent!')
-            else:
-                print('Couldn\'t find the recipient, message wasn\'t sent', letter)
-
 
 def start(_socket: socket):
     _socket.bind(('', port))

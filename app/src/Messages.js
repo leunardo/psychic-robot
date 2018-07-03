@@ -15,6 +15,12 @@ const styles = theme =>  ({
 });
 
 class Messages extends Component {
+
+    constructor(props) {
+        super(props);
+        this.props.messages.subscribe(msg => this.pushMessage(msg[0], [msg[1]]));
+    }
+
     state = {
         newMsg: '',
         messages: [],
@@ -30,7 +36,6 @@ class Messages extends Component {
         if (event.key !== 'Enter') return;
 
         this.props.send(this.state.newMsg);
-        this.pushMessage(this.state.newMsg, this.props.nickname());
         this.setState({ newMsg: '' });
     }
 
@@ -45,7 +50,6 @@ class Messages extends Component {
         const { messages } = this.state;
         return (
             <div>
-
                 <Card> 
                     <Button style={{ float: 'right' }}>
                         <Icon className={classes.dcIcon}>call_end</Icon>

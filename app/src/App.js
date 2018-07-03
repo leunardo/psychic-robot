@@ -11,7 +11,7 @@ import LinearProgress from '@material-ui/core/LinearProgress';
 import Snackbar from '@material-ui/core/Snackbar';
 import Messages from './Messages';
 
-import { fromEvent } from 'rxjs';
+import { fromEvent, Observable, Subject } from 'rxjs';
 
 const styles = {
 
@@ -27,6 +27,7 @@ class App extends Component {
     },
     connection: null,
     connected: false,
+    message$: new Subject(),
   };
 
   connectToServer = (url, nickname) => {
@@ -56,13 +57,28 @@ class App extends Component {
       connection.send(`[HI]${this.state.nickname}[|HI]\n`);
     });
 
-    message.subscribe(e => {
-      console.log(e);
+    message.subscribe(event => {
+      const msg = event.data;
+      const letter = this.extractMessage(msg, '@MSG');
+      const from = this.extractMessage(msg, '@FROM');
+
+      this.state.message$.next([letter, from]);
     })
   }
 
+  extractMessage(msg, tag) {
+    const index = msg.indexOf(tag);
+    const indexPar1 = msg.indexOf('(', index);
+    const indexPar2 = msg.indexOf(')', index);
+
+    return msg.substring(indexPar1+1, indexPar2);
+  }
+
   sendMessage = msg => {
-    this.state.connection.send(msg);
+    this.state.connection.send(`[SEND]
+    @MSG(${msg})\n
+    @FROM(${this.state.nickname})\n
+    [|SEND]\n`);
   }
 
   closeSnackBar = () => {
@@ -100,7 +116,7 @@ class App extends Component {
 
         { connected !== true && <Greeting connect={this.connectToServer}/> }
 
-        { connected === true && <Messages nickname={this.getNickname.bind(this)} send={this.sendMessage.bind(this)} style={{ height:'100%' }}/> }
+        { connected === true && <Messages messages={this.state.message$} nickname={this.getNickname.bind(this)} send={this.sendMessage.bind(this)} style={{ height:'100%' }}/> }
       </div>
     );
   }
