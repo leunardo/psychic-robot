@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import './App.css';
 
 import { withStyles } from '@material-ui/core/styles';
@@ -17,7 +17,7 @@ const styles = {
 
 };
 
-class App extends Component {
+class App extends React.Component {
   state = {
     nickname: '',
     loading: false,
@@ -34,19 +34,21 @@ class App extends Component {
     if (!nickname || !url) return;
 
     this.setState({ loading: true, nickname: nickname });
-    const connection = new WebSocket(url);
+    const connection = new WebSocket(url.trim());
+    
     const open = fromEvent(connection, 'open');
     const message = fromEvent(connection, 'message');
     const error = fromEvent(connection, 'error');
-    
-    error.subscribe(e => {
+    const close = fromEvent(connection, 'close');
+
+    const error$ = error.subscribe(e => {
       this.setState({
         snackBar: { open: true, msg: 'An error ocurred while connecting!' },
         loading: false,
       });
     });
 
-    open.subscribe(e => {
+    const open$ =open.subscribe(e => {
       this.setState({ 
         snackBar: { open: true, msg: 'Connection success!' },
         loading: false,
@@ -57,13 +59,30 @@ class App extends Component {
       connection.send(`[HI]${this.state.nickname}[|HI]\n`);
     });
 
-    message.subscribe(event => {
+    const message$ = message.subscribe(event => {
       const msg = event.data;
       const letter = this.extractMessage(msg, '@MSG');
       const from = this.extractMessage(msg, '@FROM');
 
       this.state.message$.next([letter, from]);
     })
+
+    const close$ = close.subscribe(event => {
+      message$.unsubscribe();
+      open$.unsubscribe();
+      error$.unsubscribe();
+      close$.unsubscribe();
+
+      console.log(event);
+      this.setState({
+        snackBar: { 
+          open: true, 
+          msg: 'Connection was closed with server.' 
+        },
+        connected: false,
+        connection: null,
+      })
+    });
   }
 
   extractMessage(msg, tag) {
@@ -79,6 +98,10 @@ class App extends Component {
     @MSG(${msg})\n
     @FROM(${this.state.nickname})\n
     [|SEND]\n`);
+  }
+
+  closeConnection = () => {
+    this.state.connection.send(`[ABORT]\n`);
   }
 
   closeSnackBar = () => {
@@ -116,10 +139,10 @@ class App extends Component {
 
         { connected !== true && <Greeting connect={this.connectToServer}/> }
 
-        { connected === true && <Messages messages={this.state.message$} nickname={this.getNickname.bind(this)} send={this.sendMessage.bind(this)} style={{ height:'100%' }}/> }
+        { connected === true && <Messages disconnect={this.closeConnection.bind(this)} messages={this.state.message$} nickname={this.getNickname.bind(this)} send={this.sendMessage.bind(this)} style={{ height:'100%' }}/> }
       </div>
     );
   }
 }
 
-export default withStyles(styles)(App);
+export default  withStyles(styles)(App);

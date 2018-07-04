@@ -10,7 +10,7 @@ FROM_TAG = '@FROM'
 WHOAMI_CMD = '[WHOAMI]'
 
 # Close connection to server
-ABORT_CMD = '[ABORT]'
+ABORT_CMD = '[ABORT]\n'
 
 # Default cmd used by CLIENT to send data to SERVER
 SEND_CMD = '[SEND]'

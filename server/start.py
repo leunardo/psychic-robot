@@ -46,7 +46,6 @@ def handle_new_connections(connection: socket, remote_address):
     
     users_connected[nickname] = connection
     print('Connected with', nickname)
-    # connection.send(to_dataframe('Test'))
     
     while 1:
         msg = from_dataframe(connection.recv(1024))
@@ -61,6 +60,7 @@ def handle_new_connections(connection: socket, remote_address):
         if msg == ABORT_CMD:
             print('Connection with ', remote_address, ' was closed.\n')
             connection.close()
+            del users_connected[nickname]
             break
 
         if msg == WHOAMI_CMD:

@@ -18,12 +18,12 @@ class Messages extends Component {
 
     constructor(props) {
         super(props);
-        this.props.messages.subscribe(msg => this.pushMessage(msg[0], [msg[1]]));
     }
 
     state = {
         newMsg: '',
         messages: [],
+        messages$: null,
     }
 
     handleChange = name => event => {
@@ -45,13 +45,23 @@ class Messages extends Component {
         this.setState({ messages: this.state.messages });
     }
 
+    componentDidMount () {
+        const msg$ = this.props.messages.subscribe(msg => this.pushMessage(msg[0], [msg[1]]));
+        this.setState({ messages$: msg$ });
+    }
+
+    componentWillUnmount () {
+        this.state.messages$.unsubscribe();
+        this.setState({ messages$: null });
+    }
+
     render() {
         const { classes } = this.props;
         const { messages } = this.state;
         return (
             <div>
                 <Card> 
-                    <Button style={{ float: 'right' }}>
+                    <Button onClick={this.props.disconnect} style={{ float: 'right' }}>
                         <Icon className={classes.dcIcon}>call_end</Icon>
                         Disconnect
                     </Button>
@@ -60,7 +70,7 @@ class Messages extends Component {
                         <Grid item xs>
                             { messages.map((o, i) => <p style={{ textAlign: 'left' }} key={i}>{o}</p>)}
                         </Grid>
-                        <Grid item xs>
+                        <Grid item xs style={{display: 'flex', margin: '0 15px 0 15px'}}>
                             <TextField
                                 style={{ width: '95%', marginBottom: '10px' }}
                                 label="Write a message"
@@ -69,6 +79,10 @@ class Messages extends Component {
                                 onChange={this.handleChange('newMsg')}
                                 onKeyDown={this.sendMessage.bind(this)}>
                             </TextField>
+                            <Button onClick={this.sendMessage.bind(this)}>
+                                <Icon className={classes.dcIcon}>send</Icon>
+                                send
+                            </Button>   
                         </Grid>
                         
                         <Grid item xs/>
