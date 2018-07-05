@@ -42,6 +42,7 @@ def greet_from_user(msg: str):
     return msg[greet_start:greet_end]
 
 def handle_new_connections(connection: socket, remote_address):
+    last_message_sent_to = None
     # handshake
     msg = connection.recv(1024).decode()
     response = get_handshake_response(msg)
@@ -71,6 +72,7 @@ def handle_new_connections(connection: socket, remote_address):
 
                 if to == 'all':
                     for key, value in users_connected.items():
+                        last_message_sent_to = key
                         value.sendall(to_dataframe(to_send))
                 else:
                     try:
@@ -101,8 +103,8 @@ def handle_new_connections(connection: socket, remote_address):
                 continue
         except Exception as error:
             print(error)
-            del users_connected[nickname]
-            message_to_all(nickname + ' has disconnected!', 'da-like-robot')
+            del users_connected[last_message_sent_to]
+            message_to_all(last_message_sent_to + ' has disconnected!', 'da-like-robot')
             break
 
 def start(_socket: socket):
