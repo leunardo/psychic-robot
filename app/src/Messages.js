@@ -75,7 +75,7 @@ class Messages extends Component {
                             )}
                                 
                         </Grid>
-                        <Grid item xs style={{display: 'flex', margin: '0 15px 0 15px'}}>
+                        <div style={{display: 'flex', margin: '0 15px 0 15px'}}>
                             <TextField
                                 style={{ width: '95%', marginBottom: '10px' }}
                                 label="Write a message"
@@ -88,7 +88,7 @@ class Messages extends Component {
                                 <Icon className={classes.dcIcon}>send</Icon>
                                 send
                             </Button>   
-                        </Grid>
+                        </div>
                         
                         <Grid item xs/>
                     </Grid>
