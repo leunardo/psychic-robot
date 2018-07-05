@@ -24,6 +24,7 @@ class Messages extends Component {
         newMsg: '',
         messages: [],
         messages$: null,
+        messagesContainer: null,
     }
 
     handleChange = name => event => {
@@ -34,20 +35,24 @@ class Messages extends Component {
 
     sendMessage = (event) => {
         if (event.key !== 'Enter') return;
-
-        this.props.send(this.state.newMsg);
-        this.setState({ newMsg: '' });
+        if (this.state.newMsg.trim()) {
+            this.props.send(this.state.newMsg);
+            this.setState({ newMsg: '' });
+        }
     }
 
     pushMessage = (msg, userName) => {
         const m = `[${new Date().toLocaleString()}] ${userName}: ${msg}`
         this.state.messages.push(m);
+        
+        this.state.messagesContainer.scrollTop = 
+            this.state.messagesContainer.childElementCount * 100;
         this.setState({ messages: this.state.messages });
     }
 
     componentDidMount () {
         const msg$ = this.props.messages.subscribe(msg => this.pushMessage(msg[0], [msg[1]]));
-        this.setState({ messages$: msg$ });
+        this.setState({ messages$: msg$, messagesContainer: document.querySelector('#messages') });
     }
 
     componentWillUnmount () {
@@ -67,14 +72,14 @@ class Messages extends Component {
                     </Button>
                     <p>Connected to: localhost</p>
                     <Grid container justify="center" direction="column">
-                        <Grid item xs>
+                        <div id="messages" style={{ maxHeight: '70vh', overflow: 'auto' }}>
                             { messages.map((o, i) => i == 0 ? 
                                 // first message is from bot with Greeting
                                 <pre style={{ textAlign: 'left' }} key={i}>{o}</pre> :                                
                                     <p style={{ textAlign: 'left' }} key={i}>{o}</p>
                             )}
                                 
-                        </Grid>
+                        </div>
                         <div style={{display: 'flex', margin: '0 15px 0 15px'}}>
                             <TextField
                                 style={{ width: '95%', marginBottom: '10px' }}
