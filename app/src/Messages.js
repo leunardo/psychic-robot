@@ -68,7 +68,12 @@ class Messages extends Component {
                     <p>Connected to: localhost</p>
                     <Grid container justify="center" direction="column">
                         <Grid item xs>
-                            { messages.map((o, i) => <p style={{ textAlign: 'left' }} key={i}>{o}</p>)}
+                            { messages.map((o, i) => i == 0 ? 
+                                // first message is from bot with Greeting
+                                <pre style={{ textAlign: 'left' }} key={i}>{o}</pre> :                                
+                                    <p style={{ textAlign: 'left' }} key={i}>{o}</p>
+                            )}
+                                
                         </Grid>
                         <Grid item xs style={{display: 'flex', margin: '0 15px 0 15px'}}>
                             <TextField
