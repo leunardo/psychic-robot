@@ -19,6 +19,11 @@ def extract_from_msg(tag: str, message: str):
 
     return message[parenthesis_1 + 1: parenthesis_2]
 
+def message_to_all(message: str, _from:str):
+    msg = prepare_new_msg(message, _from)
+    for key, value in users_connected.items():
+        value.sendall(to_dataframe(msg))
+
 def prepare_new_msg(message: str, _from: str):
     letter = ''
     letter += RECV_CMD + '\n'
@@ -51,23 +56,38 @@ def handle_new_connections(connection: socket, remote_address):
     print('Connected with', nickname)
     
     # send greeting to user 
-    connection.send(to_dataframe(greeting_to_user()))
-
-    try:
-        while 1:
+    connection.sendall(to_dataframe(greeting_to_user()))
+    # notify users new connection
+    message_to_all(nickname + ' has connected!', 'da-like-robot')
+    while 1:
+        try:
             msg = from_dataframe(connection.recv(1024))
             if msg.find(SEND_CMD) > -1:
                 payload = extract_from_msg(MSG_TAG, msg)
                 sender = extract_from_msg(FROM_TAG, msg)
                 to_send = prepare_new_msg(payload, sender)
                 
-                for key, value in users_connected.items():
-                    value.sendall(to_dataframe(to_send))
-                
+                to = extract_from_msg(TO_TAG, msg)
+
+                if to == 'all':
+                    for key, value in users_connected.items():
+                        value.sendall(to_dataframe(to_send))
+                else:
+                    try:
+                        user = users_connected[to]
+                        msg = to_dataframe(to_send)
+                        # send to user
+                        user.sendall(msg)
+                        # send back to sender
+                        connection.sendall(msg)
+                    except KeyError:
+                        error_msg = prepare_new_msg("Couldn't find the user to send the message!", 'da-like-robot')
+                        connection.sendall(to_dataframe(error_msg))
                 continue
 
             if msg == ABORT_CMD:
-                print('Connection with ', remote_address, ' was closed.\n')
+                print('Connection with ', nickname, ' was closed.')
+                message_to_all(nickname + ' has disconnected!', 'da-like-robot')
                 connection.close()
                 del users_connected[nickname]
                 break
@@ -79,8 +99,11 @@ def handle_new_connections(connection: socket, remote_address):
                     'CONNECTED'
                 })))
                 continue
-    except ConnectionError as conError:
-        print(conError)
+        except Exception as error:
+            print(error)
+            del users_connected[nickname]
+            message_to_all(nickname + ' has disconnected!', 'da-like-robot')
+            break
 
 def start(_socket: socket):
     _socket.bind(('', port))
