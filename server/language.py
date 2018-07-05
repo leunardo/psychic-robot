@@ -25,3 +25,15 @@ RECV_CMD_C = '[|RECV]\n'
 GREET_CMD = '[HI]'
 GREET_CMD_C = '[|HI]\n'
 
+CONNECT_GREETING = """
+    Welcome!
+    To send message, press 'Enter';
+    Commands Available:
+    - WHOAMI
+
+    More commands will be added in the future. This app stills in ALPHA, please be patience with bugs.
+
+    Source code available in: github.com/leunardo/psychic-robot
+
+    Find the dev at leoalves.ml
+"""
