@@ -93,10 +93,21 @@ class App extends React.Component {
     return msg.substring(indexPar1+1, indexPar2);
   }
 
+  findMention(msg) {
+    const indexOfAt = msg.indexOf('@');
+    const until = msg.indexOf(' ', indexOfAt);
+    if (indexOfAt >= 0) {
+      return msg.substring(indexOfAt + 1, until);
+    } else {
+      return 'all';
+    }
+  }
+
   sendMessage = msg => {
     this.state.connection.send(`[SEND]
     @MSG(${msg})\n
     @FROM(${this.state.nickname})\n
+    @TO(${this.findMention(msg)})
     [|SEND]\n`);
   }
 
