@@ -28,6 +28,9 @@ def prepare_new_msg(message: str, _from: str):
     return letter
 
 
+def greeting_to_user():
+    return prepare_new_msg(CONNECT_GREETING, 'da-like-robot')
+
 def greet_from_user(msg: str):
     greet_start = msg.find(GREET_CMD) + len(GREET_CMD)
     greet_end = msg.find(GREET_CMD_C)
@@ -47,28 +50,37 @@ def handle_new_connections(connection: socket, remote_address):
     users_connected[nickname] = connection
     print('Connected with', nickname)
     
-    while 1:
-        msg = from_dataframe(connection.recv(1024))
-        if msg.find(SEND_CMD) > -1:
-            payload = extract_from_msg(MSG_TAG, msg)
-            sender = extract_from_msg(FROM_TAG, msg)
-            to_send = prepare_new_msg(payload, sender)
-            
-            for key, value in users_connected.items():
-                value.sendall(to_dataframe(to_send))
+    # send greeting to user 
+    connection.send(to_dataframe(greeting_to_user()))
 
-        if msg == ABORT_CMD:
-            print('Connection with ', remote_address, ' was closed.\n')
-            connection.close()
-            del users_connected[nickname]
-            break
+    try:
+        while 1:
+            msg = from_dataframe(connection.recv(1024))
+            if msg.find(SEND_CMD) > -1:
+                payload = extract_from_msg(MSG_TAG, msg)
+                sender = extract_from_msg(FROM_TAG, msg)
+                to_send = prepare_new_msg(payload, sender)
+                
+                for key, value in users_connected.items():
+                    value.sendall(to_dataframe(to_send))
+                
+                continue
 
-        if msg == WHOAMI_CMD:
-            connection.send(to_dataframe(dumps({
-                remote_address,
-                connection,
-                'CONNECTED'
-            })))
+            if msg == ABORT_CMD:
+                print('Connection with ', remote_address, ' was closed.\n')
+                connection.close()
+                del users_connected[nickname]
+                break
+
+            if msg == WHOAMI_CMD:
+                connection.send(to_dataframe(dumps({
+                    remote_address,
+                    connection,
+                    'CONNECTED'
+                })))
+                continue
+    except ConnectionError as conError:
+        print(conError)
 
 def start(_socket: socket):
     _socket.bind(('', port))
