@@ -12,10 +12,7 @@ import Snackbar from '@material-ui/core/Snackbar';
 import Messages from './Messages';
 
 import { fromEvent, Observable, Subject } from 'rxjs';
-
-const styles = {
-
-};
+import { tap } from 'rxjs/operators';
 
 class App extends React.Component {
   state = {
@@ -27,17 +24,23 @@ class App extends React.Component {
     },
     connection: null,
     connected: false,
+    key: '',
     message$: new Subject(),
   };
 
   connectToServer = (url, nickname) => {
     if (!nickname || !url) return;
-
+    const firstMessage = false;
     this.setState({ loading: true, nickname: nickname });
     const connection = new WebSocket(url.trim());
     
     const open = fromEvent(connection, 'open');
-    const message = fromEvent(connection, 'message');
+    const message = fromEvent(connection, 'message').pipe(tap(m => {
+        if (!firstMessage) {
+          firstMessage = true;
+          this.setState({ key: this.extractMessage(m, '@KEY') })
+        }
+    }));
     const error = fromEvent(connection, 'error');
     const close = fromEvent(connection, 'close');
 
