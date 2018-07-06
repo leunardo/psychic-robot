@@ -3,7 +3,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 from sys import argv
 from json import dumps
 from threading import Thread
-
+from crypt import generate_key, crypt
 from language import *
 from ws import from_dataframe, get_handshake_response, to_dataframe
 
@@ -11,6 +11,7 @@ port = None
 ip = None
 
 users_connected = {}
+users_keys = {}
 
 def extract_from_msg(tag: str, message: str):
     tag_index = message.find(tag)
@@ -19,22 +20,29 @@ def extract_from_msg(tag: str, message: str):
 
     return message[parenthesis_1 + 1: parenthesis_2]
 
-def message_to_all(message: str, _from:str):
-    msg = prepare_new_msg(message, _from)
+def message_to_all(message: str, _from:str, lastUser: list):
     for key, value in users_connected.items():
+        lastUser[0] = key
+        receiver_key = users_keys[key]
+        msg = prepare_new_msg(crypt(message, receiver_key), _from)
         value.sendall(to_dataframe(msg))
+        
 
-def prepare_new_msg(message: str, _from: str):
+def prepare_new_msg(message: str, _from: str, key = None):
     letter = ''
     letter += RECV_CMD + '\n'
     letter += MSG_TAG + '(' + message + ')\n'
     letter += FROM_TAG + '(' + _from + ')\n'
+    if key:
+        letter += KEY_TAG + '(' + key + ')\n'
     letter += RECV_CMD_C
+
     return letter
 
 
-def greeting_to_user():
-    return prepare_new_msg(CONNECT_GREETING, 'da-like-robot')
+def greeting_to_user(nickname):
+    user_key = users_keys[nickname]
+    return prepare_new_msg(CONNECT_GREETING, 'da-like-robot', user_key)
 
 def greet_from_user(msg: str):
     greet_start = msg.find(GREET_CMD) + len(GREET_CMD)
@@ -42,7 +50,7 @@ def greet_from_user(msg: str):
     return msg[greet_start:greet_end]
 
 def handle_new_connections(connection: socket, remote_address):
-    last_message_sent_to = None
+    last_message_sent_to = ['']
     # handshake
     msg = connection.recv(1024).decode()
     response = get_handshake_response(msg)
@@ -53,45 +61,49 @@ def handle_new_connections(connection: socket, remote_address):
     nickname = from_dataframe(connection.recv(1024))
     nickname = greet_from_user(nickname)
     
+    # generate a unique key
+    user_key = generate_key()
+    
     users_connected[nickname] = connection
+    users_keys[nickname] = user_key
     print('Connected with', nickname)
     
     # send greeting to user 
-    connection.sendall(to_dataframe(greeting_to_user()))
+    connection.sendall(to_dataframe(greeting_to_user(nickname)))
     # notify users new connection
-    message_to_all(nickname + ' has connected!', 'da-like-robot')
+    message_to_all(nickname + ' has connected!', 'da-like-robot', last_message_sent_to)
     while 1:
         try:
             msg = from_dataframe(connection.recv(1024))
             if msg.find(SEND_CMD) > -1:
                 payload = extract_from_msg(MSG_TAG, msg)
                 sender = extract_from_msg(FROM_TAG, msg)
-                to_send = prepare_new_msg(payload, sender)
-                
                 to = extract_from_msg(TO_TAG, msg)
 
                 if to == 'all':
-                    for key, value in users_connected.items():
-                        last_message_sent_to = key
-                        value.sendall(to_dataframe(to_send))
+                    message_to_all(payload, sender, last_message_sent_to)
+
                 else:
                     try:
                         user = users_connected[to]
-                        msg = to_dataframe(to_send)
+                        key = users_keys[to]
+                        msg = to_dataframe(prepare_new_msg(crypt(payload, key), sender))
                         # send to user
                         user.sendall(msg)
                         # send back to sender
-                        connection.sendall(msg)
+                        msg_back = to_dataframe(prepare_new_msg(crypt(payload, user_key), sender))
+                        connection.sendall(msg_back)
                     except KeyError:
-                        error_msg = prepare_new_msg("Couldn't find the user to send the message!", 'da-like-robot')
-                        connection.sendall(to_dataframe(error_msg))
+                        not_found_msg = prepare_new_msg(crypt("Couldn't find the user to send the message!", user_key), 'da-like-robot')
+                        connection.sendall(to_dataframe(not_found_msg))
                 continue
 
             if msg == ABORT_CMD:
                 print('Connection with ', nickname, ' was closed.')
-                message_to_all(nickname + ' has disconnected!', 'da-like-robot')
+                message_to_all(nickname + ' has disconnected!', 'da-like-robot', last_message_sent_to)
                 connection.close()
                 del users_connected[nickname]
+                del users_keys[nickname]
                 break
 
             if msg == WHOAMI_CMD:
@@ -103,8 +115,9 @@ def handle_new_connections(connection: socket, remote_address):
                 continue
         except Exception as error:
             print(error)
-            del users_connected[last_message_sent_to]
-            message_to_all(last_message_sent_to + ' has disconnected!', 'da-like-robot')
+            del users_connected[last_message_sent_to[0]]
+            del users_keys[last_message_sent_to[0]]
+            message_to_all(last_message_sent_to[0] + ' has disconnected!', 'da-like-robot', last_message_sent_to)
             break
 
 def start(_socket: socket):
