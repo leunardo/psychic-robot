@@ -3,7 +3,7 @@
 TO_TAG = '@TO'
 MSG_TAG = '@MSG'
 FROM_TAG = '@FROM'
-
+KEY_TAG = '@KEY'
 """CMDs"""
 
 # Health check with client information
